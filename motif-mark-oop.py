@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+#import dependencies
 import argparse
 
 
@@ -14,7 +15,12 @@ def get_args():
 
 args = get_args()
 
-#Creating class for genes. this will help keep track of entries in the fasta file and then will be able to hold exons and motifs as well.
+
+#CLASSES
+
+#Creating class for genes. this will help keep track of entries in the fasta file and then will be able to relate exons and motifs as well.
+#the length defines the total line length for the final drawing
+
 class Gene:
     """For each entry into the fasta file"""
     # A class variable, shared by all instances
@@ -26,6 +32,51 @@ class Gene:
         self.header = header  # Instance variable unique to each instance
         self.sequence = sequence # Instance variable unique to each instance
         self.length = len(sequence)
+
+
+class Exon:
+    """For each Exon in a Gene""" #need starting location in gene sequence and length to draw the rectangle on the line at the right spot.
+
+    # The constructor method to initialize new objects
+    def __init__(self, header, sequence):
+        """Takes sequence and header to initialize. creates length from sequence"""
+        #self.header = header  # Instance variable unique to each instance
+        #self.sequence = sequence # Instance variable unique to each instance
+        self.length = len(sequence)
+
+
+class Motif:
+    """For each Motif in a Gene"""
+
+    # The constructor method to initialize new objects
+    def __init__(self, header, sequence):
+        """Takes sequence and header to initialize. creates length from sequence"""
+        self.header = header  # Instance variable unique to each instance
+        self.sequence = sequence # Instance variable unique to each instance
+        self.length = len(sequence)
+
+
+
+
+#FUNCTIONS (WE OUT HERE TRYNA)
+
+#find genes in FASTA file
+def grab_genes(gene):
+    """Goes through FASTA file and grabs all gene entries with headers and sequences"""
+
+#find exons in each gene. takes the input gene from the saved gene classes in the full gene list for the fasta file.
+def find_exons(gene):
+    """Goes through the gene sequence and pulls out exon locations and lengths so they can be drawn"""
+
+#find motifs in each gene. takes the input gene from the saved gene classes in the full gene list for the fasta file.
+def find_motifs(gene):
+    """Goes through gene sequence and identifies motifs with locations so they can be drawn"""
+
+#drawing function
+def draw_annotated_gene(gene, exons, motifs):
+    """This takes genes and all necessary elements and draws the pictures for each"""
+    print('fuckme')
+
 
 
 #getting motifs from the motifs file. reading it in and making a set with all the motifs. one from each line of the file.
@@ -77,3 +128,8 @@ with open(args.fasta_file, "r") as open_fasta:
 
 print(gene_list)       
 print(gene_list[0].length)
+
+
+#draw all genes
+for x in gene_list:
+    draw_annotated_gene(x, x.exons, x.motifs)
