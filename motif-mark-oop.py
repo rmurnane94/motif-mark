@@ -61,8 +61,33 @@ class Motif:
 #FUNCTIONS (WE OUT HERE TRYNA)
 
 #find genes in FASTA file
-def grab_genes(gene):
+def grab_genes(fasta_file, current_header = 'no'):
     """Goes through FASTA file and grabs all gene entries with headers and sequences"""
+    #going through fasta file to pull out genes with the headers to make classes for each gene.
+    with open(fasta_file, "r") as open_fasta:
+        for line in open_fasta:
+            line = line.strip()
+            
+            #for each time a header line is read in the file, resets the current header and sequence while adding them to the list.
+            if line[0] == '>':
+
+                #the if statement skips over the initial part of reading through the file and avoid adding an empty entry to the list.
+                if current_header != 'no':
+                    #adds the current header with its sequence for each gene to the list as a gene class.
+                    gene_list.append(Gene(current_header, current_seq))
+
+                #resets the current header when a new one is reached
+                current_header = line
+                
+                #resets the current sequence as well
+                current_seq = ''
+
+                #skips back so the sequence lines can be read.
+                continue
+
+            #for every line that is not a header, the sequence from the line is added as a string for each gene.
+            current_seq += line
+
 
 #find exons in each gene. takes the input gene from the saved gene classes in the full gene list for the fasta file.
 def find_exons(gene):
@@ -97,33 +122,11 @@ gene_list = []
 
 
 #initializing these variables which will keep track of the current header and gene for each entry in the fasta file
-current_header = 'no'
-current_seq = ''
+# current_header = 'no'
+# current_seq = ''
 
-#going through fasta file to pull out genes with the headers to make classes for each gene.
-with open(args.fasta_file, "r") as open_fasta:
-    for line in open_fasta:
-        line = line.strip()
-        
-        #for each time a header line is read in the file, resets the current header and sequence while adding them to the list.
-        if line[0] == '>':
 
-            #the if statement skips over the initial part of reading through the file and avoid adding an empty entry to the list.
-            if current_header != 'no':
-                #adds the current header with its sequence for each gene to the list as a gene class.
-                gene_list.append(Gene(current_header, current_seq))
-
-            #resets the current header when a new one is reached
-            current_header = line
-            
-            #resets the current sequence as well
-            current_seq = ''
-
-            #skips back so the sequence lines can be read.
-            continue
-
-        #for every line that is not a header, the sequence from the line is added as a string for each gene.
-        current_seq += line
+grab_genes(args.fasta_file)
 
 
 print(gene_list)       
@@ -131,5 +134,5 @@ print(gene_list[0].length)
 
 
 #draw all genes
-for x in gene_list:
-    draw_annotated_gene(x, x.exons, x.motifs)
+# for x in gene_list:
+#     draw_annotated_gene(x, x.exons, x.motifs)
