@@ -29,12 +29,18 @@ class Gene:
 
     # The constructor method to initialize new objects
     def __init__(self, header, sequence):
-        """Takes sequence and header to initialize. creates length from sequence"""
-        self.header = header  # Instance variable unique to each instance
-        self.sequence = sequence # Instance variable unique to each instance
-        self.length = len(sequence)
+        """Takes sequence and header to initialize."""
+        self.header = header  # stores gene header
+        self.sequence = sequence # stores gene sequence
+        self.length = len(sequence) # gets length of gene for drawing
+        self.exons = [] #creates empty list to store exons
+        self.motifs = [] #creates empty list to store motifs
 
-    def add_exon(self, exon): #does this make sense? can add exons this way later.
+    def add_exon(self, exon_seq, exon_start): #adds exons to the gene
+        self.exons.append(Exon(exon_seq, exon_start))
+        print(exon_seq, exon_start)
+        print(self.exons) 
+
         print('fuckme')
 
 
@@ -42,7 +48,7 @@ class Exon:
     """For each Exon in a Gene""" #need starting location in gene sequence and length to draw the rectangle on the line at the right spot.
 
     # The constructor method to initialize new objects
-    def __init__(self, start, sequence):
+    def __init__(self, sequence, start):
         """Takes sequence and header to initialize. creates length from sequence"""
         #self.header = header  # Instance variable unique to each instance
         #self.sequence = sequence # Instance variable unique to each instance
@@ -103,6 +109,9 @@ def grab_genes(fasta_file: 'str')->'list':
             #for every line that is not a header, the sequence from the line is added as a string for each gene.
             current_seq += line
     
+    #adds last gene (the loop does not add the last one so this is needed)
+    gene_list.append(Gene(current_header, current_seq))
+
     #function returns final gene list for the file.
     return gene_list
 
@@ -116,10 +125,11 @@ def find_exons(gene):
     # Use re.finditer() to get capitalized exon strings with locations
     for match in re.finditer(pattern, gene.sequence):
         # Get the exon string
-        matched_string = match.group()
+        exon_seq = match.group()
         # Get the start location in the gene
-        start_index = match.start()
+        exon_start = match.start()
 
+        gene.add_exon(exon_seq, exon_start)
     #how do i save these exons? or exon like is it one per gene or what??
     #how to save the exons to the gnes? do i need a new fxn for genes which is like add exon? that way i can add new exons to genes.
 
@@ -161,13 +171,19 @@ with open(args.motifs_file, "r") as open_motifs:
 gene_list = grab_genes(args.fasta_file)
 
 
+print(len(gene_list))
+
+for x in gene_list:
+    find_exons(x)
+# find_exons(gene_list[0])
+
 # for x in gene_list:
 #     find_exons(x) #is this correct????????
 #     find_motifs(x)
 
 
-print(gene_list)       
-print(gene_list[0].length)
+# print(gene_list)       
+# print(gene_list[0].length)
 
 
 #draw all genes
