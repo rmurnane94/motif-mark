@@ -139,25 +139,25 @@ def convert_motifs(motifs):
 
     #list to hold translated motifs
     converted_motifs = []
-
     #initialize variable to hold current converted motif
     converted_motif = ''
 
-    #iterate through all the motifs from the file
+    #loop through each motif and convert the motifs to regex patterns
     for motif in motifs:
-        if motif.isupper(): #since the dictionary is uppercase, have to make sure the keys are correct
-            for letter in motif: 
-                converted_motif += translator.get(letter, letter) #for each letter in an uppercase motif, add the value for the key.
-        
-        else: #for lowercase motifs
-            for letter in motif:
-                converted_motif += translator.get(letter.upper(), letter) #change letter to uppercase for the dictionary key
-            converted_motif = converted_motif.lower() #change the converted motif back to lowercase
+        for letter in motif: 
+            if letter.isupper(): #for each uppercase letter, can use the translator as is
+                converted_motif += translator.get(letter, letter) 
 
-        converted_motifs.append(converted_motif)
+            else:
+                converted_motif += translator.get(letter.upper(), letter).lower() #for lowercase letters, have to make uppercase to use translator
+
+        converted_motifs.append(converted_motif) #add translated motif
         converted_motif = '' #reset the current motif
-    
-    return converted_motifs
+        
+    return converted_motifs #returns list of translated motifs
+     
+
+        
 
 #find genes in FASTA file
 # def grab_genes(fasta_file, current_header = 'no'):
