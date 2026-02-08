@@ -2,6 +2,7 @@
 
 #import dependencies
 import argparse
+import re
 
 
 #argparse
@@ -33,15 +34,19 @@ class Gene:
         self.sequence = sequence # Instance variable unique to each instance
         self.length = len(sequence)
 
+    def add_exon(self, exon): #does this make sense? can add exons this way later.
+        print('fuckme')
+
 
 class Exon:
     """For each Exon in a Gene""" #need starting location in gene sequence and length to draw the rectangle on the line at the right spot.
 
     # The constructor method to initialize new objects
-    def __init__(self, header, sequence):
+    def __init__(self, start, sequence):
         """Takes sequence and header to initialize. creates length from sequence"""
         #self.header = header  # Instance variable unique to each instance
         #self.sequence = sequence # Instance variable unique to each instance
+        self.start = start
         self.length = len(sequence)
 
 
@@ -61,9 +66,19 @@ class Motif:
 #FUNCTIONS (WE OUT HERE TRYNA)
 
 #find genes in FASTA file
-def grab_genes(fasta_file, current_header = 'no'):
+# def grab_genes(fasta_file, current_header = 'no'):
+def grab_genes(fasta_file: 'str')->'list':
     """Goes through FASTA file and grabs all gene entries with headers and sequences"""
-    #going through fasta file to pull out genes with the headers to make classes for each gene.
+
+    #create final gene list that the function will output
+    gene_list = []
+    
+    #initializing header and sequence variables that will keep track of current header and sequence from the file
+    current_header = False
+    current_seq=''
+
+
+    #going through fasta file to pull out genes with sequences and headers to make classes for each gene.
     with open(fasta_file, "r") as open_fasta:
         for line in open_fasta:
             line = line.strip()
@@ -72,7 +87,7 @@ def grab_genes(fasta_file, current_header = 'no'):
             if line[0] == '>':
 
                 #the if statement skips over the initial part of reading through the file and avoid adding an empty entry to the list.
-                if current_header != 'no':
+                if current_header:
                     #adds the current header with its sequence for each gene to the list as a gene class.
                     gene_list.append(Gene(current_header, current_seq))
 
@@ -87,20 +102,43 @@ def grab_genes(fasta_file, current_header = 'no'):
 
             #for every line that is not a header, the sequence from the line is added as a string for each gene.
             current_seq += line
+    
+    #function returns final gene list for the file.
+    return gene_list
+
 
 
 #find exons in each gene. takes the input gene from the saved gene classes in the full gene list for the fasta file.
 def find_exons(gene):
     """Goes through the gene sequence and pulls out exon locations and lengths so they can be drawn"""
+    #setting pattern to find all instances of one or more capital letters. sequential capital letters are exons in this case.
+    pattern = r'[A-Z]+'
+    # Use re.finditer() to get capitalized exon strings with locations
+    for match in re.finditer(pattern, gene.sequence):
+        # Get the exon string
+        matched_string = match.group()
+        # Get the start location in the gene
+        start_index = match.start()
+
+    #how do i save these exons? or exon like is it one per gene or what??
+    #how to save the exons to the gnes? do i need a new fxn for genes which is like add exon? that way i can add new exons to genes.
+
+
 
 #find motifs in each gene. takes the input gene from the saved gene classes in the full gene list for the fasta file.
 def find_motifs(gene):
     """Goes through gene sequence and identifies motifs with locations so they can be drawn"""
+    #can maybe find something similar to the regex above for all instances of the various sequences??
+    #def regex tf out of this
+    #how 
+
+
 
 #drawing function
 def draw_annotated_gene(gene, exons, motifs):
     """This takes genes and all necessary elements and draws the pictures for each"""
     print('fuckme')
+    #once you get the genes, with the exons and the motifs you can draw them. how tf do we lay out the genes per fasta file??
 
 
 
@@ -117,16 +155,15 @@ with open(args.motifs_file, "r") as open_motifs:
 #reading through fasta file. pulling out each gene as its own string with corresponding header and make a class for each gene with header and sequence
 #genes are saved to list which keeps track of all genes for the file and will help draw the final output
 
-#initializng list of genes to track
-gene_list = []
 
 
-#initializing these variables which will keep track of the current header and gene for each entry in the fasta file
-# current_header = 'no'
-# current_seq = ''
+#creates list of all genes from the fasta file with each header and its sequence saved in Gene classes
+gene_list = grab_genes(args.fasta_file)
 
 
-grab_genes(args.fasta_file)
+# for x in gene_list:
+#     find_exons(x) #is this correct????????
+#     find_motifs(x)
 
 
 print(gene_list)       
