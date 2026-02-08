@@ -62,7 +62,7 @@ class Gene:
         for motif in all_motifs:
             matches = re.finditer(motif, self.sequence)
 
-            
+
             for match in matches:
                 # Get the exon string
                 motif_seq = match.group()
@@ -120,7 +120,44 @@ def grab_motifs(motif_file):
     #returns set of motifs
     return motifs
 
+def convert_motifs(motifs):
+    #making dictionary to convert motif sequences to regex patterns
+    translator = {
+        'A': 'A', 'C': 'C', 'G': 'G', 'T': 'T',
+        'N': '[ATGC]',  # Any nucleotide
+        'R': '[AG]',    # puRine
+        'Y': '[CT]',    # pYrimidine
+        'S': '[GC]',    # Strong
+        'W': '[AT]',    # Weak
+        'K': '[GT]',    # Keto
+        'M': '[AC]',    # aMino
+        'B': '[CGT]',   # Not A
+        'D': '[AGT]',   # Not C
+        'H': '[ACT]',   # Not G
+        'V': '[ACG]'    # Not T
+    }
 
+    #list to hold translated motifs
+    converted_motifs = []
+
+    #initialize variable to hold current converted motif
+    converted_motif = ''
+
+    #iterate through all the motifs from the file
+    for motif in motifs:
+        if motif.isupper(): #since the dictionary is uppercase, have to make sure the keys are correct
+            for letter in motif: 
+                converted_motif += translator.get(letter, letter) #for each letter in an uppercase motif, add the value for the key.
+        
+        else: #for lowercase motifs
+            for letter in motif:
+                converted_motif += translator.get(letter.upper(), letter) #change letter to uppercase for the dictionary key
+            converted_motif = converted_motif.lower() #change the converted motif back to lowercase
+
+        converted_motifs.append(converted_motif)
+        converted_motif = '' #reset the current motif
+    
+    return converted_motifs
 
 #find genes in FASTA file
 # def grab_genes(fasta_file, current_header = 'no'):
@@ -186,6 +223,10 @@ gene_list = grab_genes(args.fasta_file)
 #creates set of all motifs from motifs file
 all_motifs = grab_motifs(args.motifs_file)
 
+all_converted_motifs = convert_motifs(all_motifs)
+
+print(all_motifs)
+print(all_converted_motifs)
 
 
 for x in gene_list:
