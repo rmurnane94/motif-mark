@@ -33,11 +33,13 @@ class Gene:
         self.header = header  # stores gene header
         self.sequence = sequence # stores gene sequence
         self.length = len(sequence) # gets length of gene for drawing
-        self.exons = [] #creates empty list to store exons
-        self.motifs = [] #creates empty list to store motifs
+        self.exons = self.find_exons()#creates list of exons for the gene
+        self.motifs = self.find_motifs() #creates empty list to store motifs
 
     def find_exons(self): #adds exons to the gene
         """Goes through the gene sequence and pulls out exon locations and lengths so they can be drawn"""
+        #making a list to store results
+        exons = []
         #setting pattern to find all instances of one or more capital letters. sequential capital letters are exons in this case.
         pattern = r'[A-Z]+'
         # Use re.finditer() to locate capitalized exon strings with locations
@@ -49,34 +51,33 @@ class Gene:
             # Get the start location in the gene
             exon_start = match.start()
             #store exon information for the gene as exon classes
-            self.exons.append(Exon(exon_seq, exon_start))
-       
-        # print(self.exons) 
-
-        print('fuckme')
+            exons.append(Exon(exon_seq, exon_start))
+       #returns list of exons with sequence and position for each
+        return exons
 
 
     #find motifs in each gene. takes the input gene from the saved gene classes in the full gene list for the fasta file.
     def find_motifs(self):
         """Goes through gene sequence and identifies motifs with locations so they can be drawn"""
-        for motif in all_motifs:
-            matches = re.finditer(motif, self.sequence)
 
+        found_motifs = [] #make list to hold motifs 
 
+        for motif in all_motifs: #going through all motifs from the motifs file to search for instances in the gene
+
+            converted_motif = convert_motif(motif) #converts motif to a regex pattern
+            
+            matches = re.finditer(converted_motif, self.sequence) #searches for motif matches in the gene sequence
             for match in matches:
-                # Get the exon string
+                # Get the motif string
                 motif_seq = match.group()
                 # Get the start location in the gene
                 motif_start = match.start()
-                #store exon information for the gene as exon classes
-                self.motifs.append(Motif(motif_seq, motif_start))
+                #store motif information for the gene as motif classes
+                found_motifs.append(Motif(motif_seq, motif_start))
 
 
-        print('suck it')
-        #can maybe find something similar to the regex above for all instances of the various sequences??
-        #def regex tf out of this
-        #how 
-
+        return found_motifs #returns list of motif classes for the gene
+    
 
 
 class Exon:
@@ -120,7 +121,7 @@ def grab_motifs(motif_file):
     #returns set of motifs
     return motifs
 
-def convert_motifs(motifs):
+def convert_motif(motif):
     #making dictionary to convert motif sequences to regex patterns
     translator = {
         'A': 'A', 'C': 'C', 'G': 'G', 'T': 'T',
@@ -138,23 +139,23 @@ def convert_motifs(motifs):
     }
 
     #list to hold translated motifs
-    converted_motifs = []
+    # converted_motifs = []
     #initialize variable to hold current converted motif
     converted_motif = ''
 
     #loop through each motif and convert the motifs to regex patterns
-    for motif in motifs:
-        for letter in motif: 
-            if letter.isupper(): #for each uppercase letter, can use the translator as is
-                converted_motif += translator.get(letter, letter) 
+    # for motif in motifs:
+    for letter in motif: 
+        if letter.isupper(): #for each uppercase letter, can use the translator as is
+            converted_motif += translator.get(letter, letter) 
 
-            else:
-                converted_motif += translator.get(letter.upper(), letter).lower() #for lowercase letters, have to make uppercase to use translator
+        else:
+            converted_motif += translator.get(letter.upper(), letter).lower() #for lowercase letters, have to make uppercase to use translator
 
-        converted_motifs.append(converted_motif) #add translated motif
-        converted_motif = '' #reset the current motif
-        
-    return converted_motifs #returns list of translated motifs
+    # converted_motifs.append(converted_motif) #add translated motif
+    # converted_motif = '' #reset the current motif
+    
+    return converted_motif #returns converted motif
      
 
         
@@ -207,8 +208,13 @@ def grab_genes(fasta_file: 'str')->'list':
 
 
 #drawing function
-def draw_annotated_gene(gene, exons, motifs):
+def draw_annotated_genes(gene_list):
     """This takes genes and all necessary elements and draws the pictures for each"""
+    for i, x in enumerate(gene_list):
+        print(i, x)
+
+
+
     print('fuckme')
     #once you get the genes, with the exons and the motifs you can draw them. how tf do we lay out the genes per fasta file??
 
@@ -216,22 +222,27 @@ def draw_annotated_gene(gene, exons, motifs):
 
 
 
+#creates set of all motifs from motifs file
+all_motifs = grab_motifs(args.motifs_file)
 
 #creates list of all genes from the fasta file with each header and its sequence saved in Gene classes
 gene_list = grab_genes(args.fasta_file)
 
-#creates set of all motifs from motifs file
-all_motifs = grab_motifs(args.motifs_file)
-
-all_converted_motifs = convert_motifs(all_motifs)
-
-print(all_motifs)
-print(all_converted_motifs)
 
 
-for x in gene_list:
-    x.find_exons()
-    x.find_motifs()
+draw_annotated_genes(gene_list)
+
+
+
+# print(all_motifs)
+
+
+# print([convert_motif(x) for x in all_motifs])
+
+
+# print(gene_list[0].exons)
+
+
 # find_exons(gene_list[0])
 
 # for x in gene_list:
