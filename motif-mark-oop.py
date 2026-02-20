@@ -1,41 +1,38 @@
 #!/usr/bin/env python
 
+from __future__ import annotations
+
 #import dependencies
 import argparse
 import re
 import cairo
-
 
 #argparse
 def get_args():
     parser = argparse.ArgumentParser(description="to find motifs")
     parser.add_argument("-f", "--fasta_file", help="fasta file to find motifs", type=str, required=True)
     parser.add_argument("-m", "--motifs_file", help="file of motif sequences to identify in fasta", type=str, required=True)
-    #parser.add_argument("-o", "--output_file", help="designates file to deduplicated sam file", type=str, required=True)
-    #parser.add_argument("-u", "--umi_file", help="designates file containing the list of UMIs", type=str, required=True)
     return parser.parse_args()
 
 args = get_args()
 
-
 #CLASSES
-
 #Creating class for genes. this will help keep track of entries in the fasta file and then will be able to relate exons and motifs as well.
-#the length defines the total line length for the final drawing
-
 class Gene:
     """For each entry into the fasta file"""
-    # A class variable, shared by all instances
-    #species = "canine"
-
-    # The constructor method to initialize new Genes
-    def __init__(self, header, sequence):
+    # def __init__(self, header, sequence, motif_list, gene_number): #want the sequence and the header so can draw the gene with the header on it
+    def __init__(self, 
+                 header: str, 
+                 sequence: str, 
+                 motif_list: list[MotifType] 
+                 ): #want the sequence and the header so can draw the gene with the header on it
         """Takes sequence and header to initialize."""
         self.header = header  # stores gene header
         self.sequence = sequence # stores gene sequence
+        #self.number = gene_number
         self.length = len(sequence) # gets length of gene for drawing
-        self.exons = self.find_exons()#creates list of exons for the gene
-        self.motifs = self.find_motifs() #creates list to store motifs
+        self.exons = self.find_exons()#creates list of exons found in gene sequence
+        self.motifs = self.find_motifs(motif_list) #creates list of motifs found in gene sequence
 
     def find_exons(self): #adds exons to the gene
         """Goes through the gene sequence and pulls out exon locations and lengths so they can be drawn"""
@@ -55,59 +52,115 @@ class Gene:
             exons.append(Exon(exon_seq, exon_start))
        #returns list of exons with sequence and position for each
         return exons
+    
+    def draw(self, ctx, draw_index):
+        #set the location for the gene drawing
+        gene_location = 50 + 100*draw_index
+
+        #Write the header for the gene
+        ctx.set_source_rgb(0, 0, 0) # Black text
+        ctx.select_font_face("Arial", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+        ctx.set_font_size(14)
+        ctx.move_to(10,gene_location-35)
+        ctx.show_text(self.header)
+        
+        #Draw the LINE for the whole Gene
+        ctx.set_line_width(10) #line width
+        ctx.set_source_rgb(0, 0, 0) #line color to black
+        ctx.move_to(0,gene_location)   #sets line start based on gene
+        ctx.line_to(self.length,gene_location) #line finish
+        ctx.stroke()
+
+        for exon in self.exons:
+            exon.draw(ctx, gene_location)
+
+        for motif in self.motifs:
+            motif.draw(ctx, gene_location)
+
 
 
     #find motifs in each gene. takes the input gene from the saved gene classes in the full gene list for the fasta file.
-    def find_motifs(self):
+    def find_motifs(self, motif_list):
         """Goes through gene sequence and identifies motifs with locations so they can be drawn"""
-
         found_motifs = [] #make list to hold motifs 
-
-        for i, motif in enumerate(all_motifs): #going through all motifs from the motifs file to search for instances in the gene
-
-            converted_motif = convert_motif(motif) #converts motif to a regex pattern
-            
-            matches = re.finditer(converted_motif, self.sequence) #searches for motif matches in the gene sequence
-            for match in matches:
+        for motif in motif_list: #going through all motifs from the motifs file to search for instances in the gene
+            converted_motif = convert_motif(motif.sequence) #converts motif to a regex pattern
+            matches = re.finditer(f'(?={converted_motif})', self.sequence) #searches for motif matches in the gene sequence. f'(?={converted_motif})' allows for overlaps
+            for match in matches: #for each matching sequence for the current motif
                 # Get the motif string
-                motif_seq = match.group()
+                #motif_seq = match.group()
                 # Get the start location in the gene
                 motif_start = match.start()
                 #store motif information for the gene as motif classes
-                found_motifs.append(Motif(motif_seq, motif_start, i))
+                found_motifs.append(MotifFound(motif_start, motif.length, motif.color))
 
-
-        return found_motifs #returns list of motif classes for the gene
+        return found_motifs #returns list of found motif classes for the gene
     
+
+class MotifType:
+    """For each type of Motif pulled from the file"""
+    def __init__(self, sequence, color_code):
+        """Taking sequence from file. adds color for drawing"""
+        self.sequence = sequence
+        self.color = self.get_color(color_code)
+        self.length = len(sequence)
+
+    def get_color(self, color_code):
+        
+        color_dict = {
+            0: (1,0,0),
+            1: (0,1,0),
+            2: (0,0,1),
+            3: (1,1,0),
+            4: (1,0,1)
+            }
+        
+        color = color_dict[color_code]
+
+        return color
+        
+
 
 
 class Exon:
-    """For each Exon in a Gene""" #need starting location in gene sequence and length to draw the rectangle on the line at the right spot.
-
-    # The constructor method to initialize new objects
+    """For each Exon in a Gene""" #need starting location in gene sequence and length to draw the rectangle on the gene line at the right spot.
     def __init__(self, sequence, start):
         """Takes sequence and header to initialize. creates length from sequence"""
-    
-        self.sequence = sequence 
-        self.start = start
-        self.length = len(sequence)
+        self.sequence = sequence #sequence of the exon
+        self.start = start #start location of exon
+        self.length = len(sequence) #length of exon
+        #self.gene_number = gene_number
+
+    def draw(self, ctx, gene_location):
+        #Parameters: x, y, width, height (top-left corner coordinates and size)
+        x = self.start
+        y = gene_location-25
+        width = self.length
+        height = 50
+        ctx.rectangle(x, y, width, height) #(x0,y0,x1,y1)
+        ctx.set_source_rgb(0, 0, 0) #set exon color to black
+        ctx.fill() #draw rectangle
 
 
-class Motif:
-    """For each Motif in a Gene"""
-
-    # The constructor method to initialize new objects
-    def __init__(self, sequence, start, color_key):
+class MotifFound:
+    """For each Motif in a Gene""" #need location and length for drawing. colorkey helps generate color and motif spacing for the final drawing
+    def __init__(self, start, length, color):
         """Takes sequence and header to initialize. creates length from sequence"""
+        #self.sequence = sequence  #sequence of motif
+        self.length = length #length of motif
+        self.start = start #location in gene of motif
+        self.color = color #color for that motif.
+    
+    def draw(self, ctx, gene_location):
+        """Draws the output"""
         
-        self.sequence = sequence 
-        self.length = len(sequence)
-        self.start = start
-        self.color = color_dict[color_key]
-
-    # def select_color(self, color_key):
-        
-    #     return color_dict[color_key]
+        ctx.set_line_width(self.length)
+        ctx.set_source_rgb(*self.color) #unpacks the color tuple with the *. sets color for each motif
+        motif_stagger = 0 #creates a variable length for each motif to stagger the location around the gene
+        ctx.move_to(self.start,gene_location-35+motif_stagger)        #(x,y)
+        ctx.line_to(self.start,gene_location+15+motif_stagger)
+        ctx.stroke()
+        #print('fucksuck')
 
 
 #FUNCTIONS (WE OUT HERE TRYNA)
@@ -115,20 +168,22 @@ class Motif:
 #getting motifs from the motifs file
 def grab_motifs(motif_file):
     """Goes through motifs file and grabs all motifs"""
-    #creates empty set for storing motifs
+    #creates empty list for storing motifs
     motifs = []
-    #reading through the file and saving each line to the set
+    #reading through the file and saving motif from each line to the set. one motif per line in this case.
     with open(motif_file, "r") as open_motifs:
-        for line in open_motifs:
+        for i,line in enumerate(open_motifs):
             line = line.strip()
-            motifs.append(line)
-    #returns set of motifs
+            motifs.append(MotifType(line, i))
+    #returns list of motifs
     return motifs
 
-def convert_motif(motif):
+
+def convert_motif(motif: str):
+    """Convert Motifs to regex friendly patterns for searching gene sequences"""
     #making dictionary to convert motif sequences to regex patterns
     translator = {
-        'A': 'A', 'C': 'C', 'G': 'G', 'T': 'T',
+        'A': 'A', 'C': 'C', 'G': 'G', 'T': '[TU]', 'U': '[TU]',
         'N': '[ATGC]',  # Any nucleotide
         'R': '[AG]',    # puRine
         'Y': '[CT]',    # pYrimidine
@@ -141,41 +196,26 @@ def convert_motif(motif):
         'H': '[ACT]',   # Not G
         'V': '[ACG]'    # Not T
     }
-
-    #list to hold translated motifs
-    # converted_motifs = []
     #initialize variable to hold current converted motif
     converted_motif = ''
-
-    #loop through each motif and convert the motifs to regex patterns
-    # for motif in motifs:
+    #loop through each motif and convert each letter to its matching regex pattern to account for degeneracy
     for letter in motif: 
         if letter.isupper(): #for each uppercase letter, can use the translator as is
-            converted_motif += translator.get(letter, letter) 
-
+            converted_motif += translator[letter] 
         else:
-            converted_motif += translator.get(letter.upper(), letter).lower() #for lowercase letters, have to make uppercase to use translator
+            converted_motif += translator[letter.upper()].lower() #for lowercase letters, have to make uppercase to use translator. then lowers the result
 
-    # converted_motifs.append(converted_motif) #add translated motif
-    # converted_motif = '' #reset the current motif
-    
     return converted_motif #returns converted motif
      
 
-        
-
 #find genes in FASTA file
-# def grab_genes(fasta_file, current_header = 'no'):
-def grab_genes(fasta_file: 'str')->'list':
+def grab_genes(fasta_file: 'str', motif_list)->'list':
     """Goes through FASTA file and grabs all gene entries with headers and sequences"""
-
-    #create final gene list that the function will output
-    gene_list = []
+    gene_list = [] #create final gene list that the function will output
     
     #initializing header and sequence variables that will keep track of current header and sequence from the file
-    current_header = False
+    current_header = ''
     current_seq=''
-
 
     #going through fasta file to pull out genes with sequences and headers to make classes for each gene.
     with open(fasta_file, "r") as open_fasta:
@@ -184,18 +224,14 @@ def grab_genes(fasta_file: 'str')->'list':
             
             #for each time a header line is read in the file, resets the current header and sequence while adding them to the list.
             if line[0] == '>':
-
                 #the if statement skips over the initial part of reading through the file and avoid adding an empty entry to the list.
                 if current_header:
                     #adds the current header with its sequence for each gene to the list as a gene class.
-                    gene_list.append(Gene(current_header, current_seq))
-
+                    gene_list.append(Gene(current_header, current_seq, all_motifs))
                 #resets the current header when a new one is reached
                 current_header = line
-                
                 #resets the current sequence as well
                 current_seq = ''
-
                 #skips back so the sequence lines can be read.
                 continue
 
@@ -203,21 +239,16 @@ def grab_genes(fasta_file: 'str')->'list':
             current_seq += line
     
     #adds last gene (the loop does not add the last one so this is needed)
-    gene_list.append(Gene(current_header, current_seq))
+    gene_list.append(Gene(current_header, current_seq, motif_list))
 
     #function returns final gene list for the file.
     return gene_list
 
 
-
-
-#drawing function
-def draw_annotated_genes(gene_list):
-    """This takes genes and all necessary elements and draws the pictures for each"""
-    print('hi')
-
-    #Create pycairo surface
-    WIDTH, HEIGHT = 1000, 1000
+#create drawing surface function
+def create_context(gene_list):
+     #Create pycairo surface
+    WIDTH, HEIGHT = 1100, 100*len(gene_list)
     surface = cairo.ImageSurface(cairo.FORMAT_RGB24, WIDTH, HEIGHT)
     ctx = cairo.Context(surface)
 
@@ -225,119 +256,58 @@ def draw_annotated_genes(gene_list):
     ctx.set_source_rgb(1.0, 1.0, 1.0)
     ctx.mask_surface(surface, 0, 0)
 
+    return ctx, surface
+
+#drawing function
+def draw_annotated_genes(ctx, gene_list):
+    """This takes genes and all necessary elements and draws the pictures for each"""
+    #draw the annotated genes
     for i, gene in enumerate(gene_list):
-        print(i, gene)
+        gene.draw(ctx, i)
+       
 
-        #set the location for the gene drawing
-        gene_location = 50 + 100*i
-        
-        #Draw the LINE for the whole Gene
-        ctx.set_line_width(10) #line width
-        ctx.set_source_rgb(0, 0, 0) #line color to black
-        ctx.move_to(0,gene_location)   #sets line start based on gene
-        ctx.line_to(gene.length,gene_location) #line finish
-        ctx.stroke()
-
-        #Draw RECTANGLES for Exons in Gene
-        for exon in gene.exons:
-            # print('exon')
-        
-        
-            #Parameters: x, y, width, height (top-left corner coordinates and size)
-            x = exon.start
-            y = gene_location-25
-            width = exon.length
-            height = 50
-            ctx.rectangle(x, y, width, height) #(x0,y0,x1,y1)
-            ctx.set_source_rgb(0, 0, 0) #set exon color to black
-            ctx.fill() #draw rectangle
-
-    
-
-        #Draw lines for motifs in Gene
-        for motif in gene.motifs:
-            ctx.set_line_width(motif.length)
-
-            
-            ctx.set_source_rgb(*motif.color) #unpacks the color tuple with the *. sets color for each motif
-          
-
-            ctx.move_to(motif.start,gene_location-25)        #(x,y)
-            ctx.line_to(motif.start,gene_location+25)
-            ctx.stroke()
-
-    
+def draw_figure_key(ctx, all_motifs):  
     # Draw Key
-    x, y = 800, 800
+    x, y = 1050, 100
     box_size = 15
-    for i, motif in enumerate(all_motifs):
-        # Color box
-        ctx.set_source_rgb(*color_dict[i])
+    for motif in all_motifs:
+        # Color boxes
+        ctx.set_source_rgb(*motif.color)
         ctx.rectangle(x, y, box_size, box_size)
         ctx.fill()
         
-        # Text label
+        # Text labels
         ctx.set_source_rgb(0, 0, 0) # Black text
         ctx.select_font_face("Arial", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
         ctx.set_font_size(14)
         ctx.move_to(x + box_size + 10, y + box_size - 3)
-        ctx.show_text(motif)
+        ctx.show_text(motif.sequence)
         
         y += box_size + 10 # Move down for next item
 
-    #save the thing
-    surface.write_to_png("my_figure.png")
-    print('fuckme')
-    #once you get the genes, with the exons and the motifs you can draw them. how tf do we lay out the genes per fasta file??
+def output_figure(surface):
+    fasta_name = args.fasta_file
+    name_to_use = fasta_name.split('.')[0]
+    surface.write_to_png(f"{name_to_use}.png")
 
 
-#creates set of all motifs from motifs file
+#CALLING FUNCTIONS
+
+#creates list of all motifs from motifs file
 all_motifs = grab_motifs(args.motifs_file)
 
-color_dict = {0: (1,0,0),
-            1: (0,1,0),
-            2: (0,0,1),
-            3: (1,1,0),
-            4: (1,0,1)
-            }
+#creates list of all genes as classes from the gene file. Gene classes store exon and motif classes for each gene in addition to gene info.
+gene_list = grab_genes(args.fasta_file, all_motifs)
 
-#creates list of all genes from the fasta file with each header and its sequence saved in Gene classes
-gene_list = grab_genes(args.fasta_file)
+ctx, surface = create_context(gene_list)
 
-draw_annotated_genes(gene_list)
+#draws the final drawing. goes through each gene and draws it along with its associated exons and motifs. includes color key for motifs.
+draw_annotated_genes(ctx, gene_list)
 
-# draw_annotated_genes(gene_list)
-# print(gene_list[3].motifs)
+#draws the key for the figure
+draw_figure_key(ctx, all_motifs)
 
-# draw_annotated_genes(gene_list)
+#save the figure
+output_figure(surface)
 
-# for x in gene_list:
-#     for y in x.motifs:
-#         print(type(y))
-#         print(y.sequence)
-#     print('------')
-
-
-# print(all_motifs)
-
-
-# print([convert_motif(x) for x in all_motifs])
-
-
-# print(gene_list[0].exons)
-
-
-# find_exons(gene_list[0])
-
-# for x in gene_list:
-#     find_exons(x) #is this correct????????
-#     find_motifs(x)
-
-
-# print(gene_list)       
-# print(gene_list[0].length)
-
-
-#draw all genes
-# for x in gene_list:
-#     draw_annotated_gene(x, x.exons, x.motifs)
+print('finished')
