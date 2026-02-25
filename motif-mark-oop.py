@@ -70,6 +70,7 @@ class Gene:
         return found_motifs #returns list of found motif classes for the gene
     
     def draw(self, ctx, draw_index):
+        """Draws Gene Objects with associated exons and motifs"""
         #set the location for the gene drawing
         gene_location = 75 + 125*draw_index
 
@@ -82,7 +83,7 @@ class Gene:
         
         #Draw the LINE for the whole Gene
         ctx.set_line_width(10) #line width
-        ctx.set_source_rgba(0, 0, 0, .8) #line color to black
+        ctx.set_source_rgba(0, 0, 0, 1) #line color to black
         ctx.move_to(0,gene_location)   #sets line start based on gene
         ctx.line_to(self.length,gene_location) #line finish
         ctx.stroke()
@@ -127,13 +128,14 @@ class Exon:
         self.length = len(sequence) #length of exon
 
     def draw(self, ctx, gene_location):
+        """Draws exon objects"""
         #Parameters: x, y, width, height (top-left corner coordinates and size)
         x = self.start
         y = gene_location-15
         width = self.length
         height = 30
         ctx.rectangle(x, y, width, height) #(x0,y0,x1,y1)
-        ctx.set_source_rgba(0, 0, 0, .8) #set exon color to black
+        ctx.set_source_rgba(0, 0, 0, 1) #set exon color to black
         ctx.fill() #draw rectangle
 
 
@@ -264,7 +266,7 @@ def draw_annotated_genes(ctx, gene_list):
 
 def draw_figure_key(ctx, all_motifs):  
     """Draws Figure Key including MotifType sequences and their colors for visual identification"""
-    x, y = 1010, 25
+    x, y = 1020, 25
     box_size = 15
     for motif in all_motifs:
         # Color boxes
@@ -282,6 +284,7 @@ def draw_figure_key(ctx, all_motifs):
         y += box_size + 10 # Move down for next item
 
 def output_figure(surface):
+    """Takes the final drawing and saves it as a figure with appropriate name"""
     fasta_name = args.fasta_file
     name_to_use = fasta_name.split('.')[0]
     surface.write_to_png(f"{name_to_use}.png")
@@ -295,6 +298,7 @@ all_motifs = grab_motifs(args.motifs_file)
 #creates list of all genes as classes from the gene file. Gene classes store exon and motif classes for each gene in addition to gene info.
 gene_list = grab_genes(args.fasta_file, all_motifs)
 
+#create the surface for drawing
 ctx, surface = create_context(gene_list)
 
 #draws the final drawing. goes through each gene and draws it along with its associated exons and motifs. includes color key for motifs.
